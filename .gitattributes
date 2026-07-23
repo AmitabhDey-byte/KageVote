@@ -1,0 +1,4 @@
+# Keep source and workflow files consistent across Windows and GitHub Actions.
+* text=auto eol=lf
+
+*.png binary
