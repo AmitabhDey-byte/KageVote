@@ -32,8 +32,8 @@ const replies: Array<{ matches: string[]; reply: GuideReply }> = [
   {
     matches: ['wallet', 'connect', 'preprod', 'network'],
     reply: {
-      title: 'Connect Lace on the selected network.',
-      body: 'KageVote can connect a compatible Midnight wallet extension on Preview or Preprod and confirm its shielded address. A real ballot stays locked until a deployed contract address and generated ZK artifacts are configured.',
+      title: 'Choose 1AM or Lace on the selected network.',
+      body: 'KageVote discovers compatible Midnight wallet extensions, lets you choose 1AM or Lace, then confirms the shielded address on Preview or Preprod. A real ballot stays locked until a deployed contract address and generated ZK artifacts are configured.',
       action: 'Open the launchpad',
     },
   },

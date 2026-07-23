@@ -28,7 +28,9 @@ import {
 import { localGuideReply, starterQuestions } from './lib/guide';
 import {
   connectMidnightWallet,
+  getInjectedWallets,
   shortenMidnightAddress,
+  type InjectedMidnightWallet,
   type MidnightNetwork,
   type MidnightWalletConnection,
 } from './lib/midnightWallet';
@@ -69,21 +71,39 @@ function App() {
   const { theme, setTheme } = useTheme();
   const [wallet, setWallet] = useState<MidnightWalletConnection | null>(null);
   const [walletNetwork, setWalletNetwork] = useState<MidnightNetwork>('preprod');
+  const [walletOptions, setWalletOptions] = useState<InjectedMidnightWallet[]>([]);
+  const [walletId, setWalletId] = useState('');
   const [walletError, setWalletError] = useState('');
   const [walletConnecting, setWalletConnecting] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
 
+  function refreshWalletOptions() {
+    const detected = getInjectedWallets().filter((candidate) => candidate.compatible);
+    setWalletOptions(detected);
+    setWalletId((current) => detected.some((candidate) => candidate.walletId === current) ? current : (detected[0]?.walletId ?? ''));
+    return detected;
+  }
+
+  useEffect(() => {
+    refreshWalletOptions();
+    window.addEventListener('focus', refreshWalletOptions);
+    return () => window.removeEventListener('focus', refreshWalletOptions);
+  }, []);
+
   async function handleWallet() {
     if (wallet) {
+      const connectedWalletName = wallet.walletName;
       setWallet(null);
-      setWalletError('Wallet details cleared from this KageVote session. Lace remains connected until you revoke access in the wallet.');
+      setWalletError(`Wallet details cleared from this KageVote session. ${connectedWalletName} remains connected until you revoke access in the wallet.`);
       return;
     }
 
     setWalletConnecting(true);
     setWalletError('');
     try {
-      const connection = await connectMidnightWallet(walletNetwork);
+      const detected = refreshWalletOptions();
+      const selectedWalletId = detected.some((candidate) => candidate.walletId === walletId) ? walletId : detected[0]?.walletId;
+      const connection = await connectMidnightWallet(walletNetwork, selectedWalletId);
       setWallet(connection);
     } catch (error) {
       setWalletError(error instanceof Error ? error.message : 'Midnight wallet connection failed.');
@@ -98,9 +118,12 @@ function App() {
         theme={theme}
         toggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
         wallet={wallet}
+        walletOptions={walletOptions}
+        walletId={walletId}
         walletNetwork={walletNetwork}
         walletConnecting={walletConnecting}
         onNetworkChange={setWalletNetwork}
+        onWalletChoice={setWalletId}
         onWallet={() => void handleWallet()}
       />
       {walletError && <div className="wallet-notice" role="status">{walletError}</div>}
@@ -124,17 +147,23 @@ function AppHeader({
   theme,
   toggleTheme,
   wallet,
+  walletOptions,
+  walletId,
   walletNetwork,
   walletConnecting,
   onNetworkChange,
+  onWalletChoice,
   onWallet,
 }: {
   theme: Theme;
   toggleTheme: () => void;
   wallet: MidnightWalletConnection | null;
+  walletOptions: InjectedMidnightWallet[];
+  walletId: string;
   walletNetwork: MidnightNetwork;
   walletConnecting: boolean;
   onNetworkChange: (network: MidnightNetwork) => void;
+  onWalletChoice: (walletId: string) => void;
   onWallet: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -157,11 +186,15 @@ function AppHeader({
         </nav>
         <div className="header-actions">
           <label className="network-picker"><i /><span>NETWORK</span><select value={walletNetwork} onChange={(event) => onNetworkChange(event.target.value as MidnightNetwork)} disabled={Boolean(wallet)} aria-label="Midnight network"><option value="preview">PREVIEW</option><option value="preprod">PREPROD</option></select></label>
+          <label className="network-picker wallet-picker"><WalletCards size={13} /><span>WALLET</span><select value={walletId} onChange={(event) => onWalletChoice(event.target.value)} disabled={Boolean(wallet)} aria-label="Midnight wallet">
+            {!walletOptions.length && <option value="">DETECT WALLET</option>}
+            {walletOptions.map((candidate) => <option key={candidate.walletId} value={candidate.walletId}>{candidate.name.toUpperCase()}</option>)}
+          </select></label>
           <button className="icon-button theme-button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
           <button className={wallet ? 'wallet-button connected' : 'wallet-button'} onClick={onWallet} disabled={walletConnecting} title={wallet?.address}>
-            <WalletCards size={16} /> {walletConnecting ? 'Connecting…' : wallet ? shortenMidnightAddress(wallet.address) : 'Connect Lace'}
+            <WalletCards size={16} /> {walletConnecting ? 'Connecting...' : wallet ? shortenMidnightAddress(wallet.address) : 'Connect wallet'}
           </button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle navigation">
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -245,11 +278,11 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
             })}
           </div>
           <button className="primary-button" onClick={castBallot} disabled={!wallet || ballotState === 'deployment-required'}>
-            {ballotState === 'ready' && <><LockKeyhole size={17} /> {wallet ? 'Cast private ballot' : 'Connect Lace to vote'}</>}
+            {ballotState === 'ready' && <><LockKeyhole size={17} /> {wallet ? 'Cast private ballot' : 'Connect wallet to vote'}</>}
             {ballotState === 'deployment-required' && <><Info size={17} /> Deploy contract to enable voting</>}
           </button>
-          <p className="helper-text"><Info size={14} /> {wallet ? `Connected to Midnight ${wallet.network}. Ballot calls unlock only after the real contract address and ZK artifacts are configured.` : 'Connect a Lace wallet on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
-          {!wallet && <div className="wallet-connect-tip"><ShieldCheck size={15} /><span>Choose <strong>Preview</strong> or <strong>Preprod</strong> in the top bar before connecting Lace.</span></div>}
+          <p className="helper-text"><Info size={14} /> {wallet ? `Connected to Midnight ${wallet.network}. Ballot calls unlock only after the real contract address and ZK artifacts are configured.` : 'Choose 1AM or Lace, then connect it on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
+          {!wallet && <div className="wallet-connect-tip"><ShieldCheck size={15} /><span>Choose <strong>1AM</strong> or <strong>Lace</strong>, then choose <strong>Preview</strong> or <strong>Preprod</strong> before connecting.</span></div>}
           {wallet && <div className="live-wallet-row"><span><i /> {wallet.walletName} CONNECTED // {wallet.network.toUpperCase()}</span><button onClick={() => void copyWalletAddress()} title="Copy shielded address" aria-live="polite">{addressCopied ? <Check size={14} /> : <Copy size={14} />}{addressCopied ? 'COPIED' : shortenMidnightAddress(wallet.address)}</button></div>}
         </article>
 
@@ -270,7 +303,7 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
 
       {ballotState === 'deployment-required' && (
         <section className="receipt-banner reveal">
-          <div><span className="eyebrow"><span /> LIVE WALLET VERIFIED</span><h2>Deployment is the remaining gate.</h2><p>Lace is connected, but KageVote will not fabricate a ballot receipt until the Preprod contract, generated types, and ZK artifacts are deployed.</p></div>
+          <div><span className="eyebrow"><span /> LIVE WALLET VERIFIED</span><h2>Deployment is the remaining gate.</h2><p>{wallet?.walletName} is connected, but KageVote will not fabricate a ballot receipt until the Preprod contract, generated types, and ZK artifacts are deployed.</p></div>
           <Link className="receipt-action" to="/launchpad"><FileCode2 size={15} /> Open launchpad</Link>
         </section>
       )}

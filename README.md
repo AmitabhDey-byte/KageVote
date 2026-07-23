@@ -4,7 +4,7 @@
 
 KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a voter proves eligibility locally, seals a ballot without revealing their choice, and the community verifies the proposal lifecycle and aggregate result.
 
-> Status: the app now uses Midnight's DApp Connector to connect a compatible wallet extension (such as Lace) on **Preview** or **Preprod** and display its confirmed shielded address. A real contract call is intentionally not claimed yet because this workstation does not have the official Compact compiler, Docker/proof server, generated ZK artifacts, or a deployed/funded contract.
+> Status: the app uses Midnight's DApp Connector to discover and connect **1AM** or **Lace** on **Preview** or **Preprod**, then displays the confirmed shielded address. It is configured for Vercel: the Vite SPA is statically deployed and Kiri's optional Gemini proxy runs as a serverless function. A real contract call is intentionally not claimed yet because this workstation does not have the official Compact compiler, Docker/proof server, generated ZK artifacts, or a deployed/funded contract.
 
 ## Initial product idea
 
@@ -12,7 +12,7 @@ KageVote brings private voting to communities that need credible outcomes withou
 
 ## Features
 
-- Real wallet-extension connection through `window.midnight`: choose Preview or Preprod, connect Lace, validate the returned network, and display the shielded address.
+- Real multi-wallet connection through `window.midnight`: choose 1AM or Lace, select Preview or Preprod, validate the returned network, and display the shielded address.
 - Safe live-voting gate: the interface refuses to fabricate a receipt or submit a ballot until the contract address, generated contract client, and ZK artifacts exist.
 - Light and dark modes, persisted locally.
 - Five navigable product views: voting chamber, proposal archive, privacy model, Kiri guide, and developer launchpad.
@@ -44,16 +44,17 @@ npm run dev
 
 Open the Vite address shown in the terminal (normally `http://localhost:5173`). The UI connects to the local API at port `8787` through Vite’s proxy.
 
-### Connect Lace on Preview or Preprod
+### Connect 1AM or Lace on Preview or Preprod
 
-1. Install and unlock a Midnight-compatible Lace wallet.
-2. Select `PREVIEW` or `PREPROD` in KageVote’s network picker.
-3. In Lace, switch to the same Midnight network and configure its proving service as required by the network.
-4. Click **Connect Lace** and approve the wallet prompt.
+1. Install and unlock [1AM](https://1am.xyz/) or a Midnight-compatible Lace wallet.
+2. Select the detected extension in KageVote's `WALLET` picker.
+3. Select `PREVIEW` or `PREPROD` in KageVote's network picker.
+4. In the selected wallet, switch to the same Midnight network and configure its proving service as required by the network.
+5. Click **Connect wallet** and approve the wallet prompt.
 
-KageVote discovers the wallet from the official DApp Connector injection (`window.midnight`), calls `connect(network)`, and validates the returned connection/network before it displays the shielded address. It only asks the wallet for connection configuration, status, shielded address, and DUST balance capability; it does not request a seed phrase or initiate a transfer. Midnight documents this connector pattern and its wallet-controlled service configuration in the [DApp Connector API](https://docs.midnight.network/api-reference/dapp-connector).
+KageVote discovers each compatible wallet from the official DApp Connector injection (`window.midnight`) and lets the user select it before calling `connect(network)`. It validates the returned connection/network before displaying the shielded address. It only asks the wallet for connection configuration, status, shielded address, and DUST-balance capability; it does not request a seed phrase or initiate a transfer. Midnight documents multi-wallet selection and its wallet-controlled service configuration in the [DApp Connector API](https://docs.midnight.network/api-reference/dapp-connector).
 
-If the connection is not detected, unlock Lace, confirm that its Midnight network matches KageVote’s network picker, then refresh the page. Once connected, the voting chamber displays a copyable, shortened version of the confirmed shielded address.
+If the connection is not detected, unlock 1AM or Lace, confirm that its Midnight network matches KageVote's network picker, then refresh the page. Once connected, the voting chamber displays a copyable, shortened version of the confirmed shielded address.
 
 ```bash
 npm test
@@ -71,7 +72,16 @@ GEMINI_API_KEY=your_restricted_key
 GEMINI_MODEL=gemini-3.5-flash
 ```
 
-Never place the key in a `VITE_*` variable, frontend bundle, or repository. The Express endpoint in `server/index.mjs` holds the key, constrains Kiri’s scope, and falls back to local replies if it is absent. See the [Gemini API reference](https://ai.google.dev/api) for current server-side API guidance.
+Never place the key in a `VITE_*` variable, frontend bundle, or repository. Locally, the Express endpoint in `server/index.mjs` holds the key; in production, `api/kiri.mjs` is a Vercel Function. Set `GEMINI_API_KEY` and optional `GEMINI_MODEL` in **Vercel Project Settings -> Environment Variables** for Preview and Production. The key stays server-side and Kiri falls back to local replies if it is absent. See the [Gemini API reference](https://ai.google.dev/api) for current server-side API guidance.
+
+## Deploy to Vercel
+
+1. Push this repository to GitHub and import it into Vercel.
+2. Keep the detected **Vite** framework settings: build command `npm run build` and output directory `dist`.
+3. Add `GEMINI_API_KEY` (and, optionally, `GEMINI_MODEL=gemini-3.5-flash`) under Environment Variables. Do not use the `VITE_` prefix.
+4. Deploy. `vercel.json` preserves SPA deep links such as `/privacy`; `/api/kiri` is served by the included serverless function.
+
+Vercel automatically serves functions placed in the root `api/` directory, and its Vite deployment guide documents the SPA rewrite used here. See [Vercel Functions](https://vercel.com/docs/functions) and [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite).
 
 ## Midnight contract and Preprod path
 
@@ -92,7 +102,8 @@ The contract’s design follows Midnight’s public-ledger / private-witness mod
 
 ```text
 src/                    React voting UI, routes, styles, local Kiri guide
-server/index.mjs        Server-side Gemini proxy (optional)
+api/kiri.mjs            Production Vercel Function for the Gemini proxy (optional)
+server/index.mjs        Local Express Gemini proxy (optional)
 contracts/KageVote.compact
 scripts/check-contract.mjs
 public/assets/kiri-guide.png
@@ -105,6 +116,6 @@ The GitHub Actions workflow runs contract source validation, type checking, four
 
 ## Important limitations
 
-- Wallet connection is real when a compatible Lace extension is installed and confirms the selected Preview/Preprod network. Ballot submission is not enabled until the proof server, generated artifacts, and deployed contract are present.
+- Wallet connection is real when 1AM or Lace is installed, selected, and confirms the selected Preview/Preprod network. Ballot submission is not enabled until the proof server, generated artifacts, and deployed contract are present.
 - The included Compact contract is deliberately a first-cycle foundation; it counts valid participation but does not yet implement production-grade encrypted ballot storage, nullifiers, authority checks, or final tally aggregation.
 - Do not use it for real elections or handling funds without a formal security review and a completed protocol design.
