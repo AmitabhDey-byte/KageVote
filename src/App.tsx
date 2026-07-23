@@ -26,9 +26,15 @@ import {
   Zap,
 } from 'lucide-react';
 import { localGuideReply, starterQuestions } from './lib/guide';
+import {
+  connectMidnightWallet,
+  shortenMidnightAddress,
+  type MidnightNetwork,
+  type MidnightWalletConnection,
+} from './lib/midnightWallet';
 
 type Theme = 'dark' | 'light';
-type BallotState = 'ready' | 'proving' | 'cast';
+type BallotState = 'ready' | 'deployment-required';
 
 const navItems = [
   { to: '/', label: 'Vote' },
@@ -61,20 +67,46 @@ function useTheme() {
 
 function App() {
   const { theme, setTheme } = useTheme();
-  const [walletConnected, setWalletConnected] = useState(false);
+  const [wallet, setWallet] = useState<MidnightWalletConnection | null>(null);
+  const [walletNetwork, setWalletNetwork] = useState<MidnightNetwork>('preprod');
+  const [walletError, setWalletError] = useState('');
+  const [walletConnecting, setWalletConnecting] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+
+  async function handleWallet() {
+    if (wallet) {
+      setWallet(null);
+      setWalletError('Wallet details cleared from this KageVote session. Lace remains connected until you revoke access in the wallet.');
+      return;
+    }
+
+    setWalletConnecting(true);
+    setWalletError('');
+    try {
+      const connection = await connectMidnightWallet(walletNetwork);
+      setWallet(connection);
+    } catch (error) {
+      setWalletError(error instanceof Error ? error.message : 'Midnight wallet connection failed.');
+    } finally {
+      setWalletConnecting(false);
+    }
+  }
 
   return (
     <div className="app-shell">
       <AppHeader
         theme={theme}
         toggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
-        walletConnected={walletConnected}
-        onWallet={() => setWalletConnected((current) => !current)}
+        wallet={wallet}
+        walletNetwork={walletNetwork}
+        walletConnecting={walletConnecting}
+        onNetworkChange={setWalletNetwork}
+        onWallet={() => void handleWallet()}
       />
+      {walletError && <div className="wallet-notice" role="status">{walletError}</div>}
       <main className="content-rail">
         <Routes>
-          <Route path="/" element={<VotePage walletConnected={walletConnected} onOpenGuide={() => setGuideOpen(true)} />} />
+          <Route path="/" element={<VotePage wallet={wallet} onOpenGuide={() => setGuideOpen(true)} />} />
           <Route path="/proposals" element={<ProposalPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/guide" element={<GuidePage onOpenChat={() => setGuideOpen(true)} />} />
@@ -91,12 +123,18 @@ function App() {
 function AppHeader({
   theme,
   toggleTheme,
-  walletConnected,
+  wallet,
+  walletNetwork,
+  walletConnecting,
+  onNetworkChange,
   onWallet,
 }: {
   theme: Theme;
   toggleTheme: () => void;
-  walletConnected: boolean;
+  wallet: MidnightWalletConnection | null;
+  walletNetwork: MidnightNetwork;
+  walletConnecting: boolean;
+  onNetworkChange: (network: MidnightNetwork) => void;
   onWallet: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,12 +156,12 @@ function AppHeader({
           ))}
         </nav>
         <div className="header-actions">
-          <span className="network-pill"><i /> PREPROD</span>
+          <label className="network-picker"><i /><span>NETWORK</span><select value={walletNetwork} onChange={(event) => onNetworkChange(event.target.value as MidnightNetwork)} disabled={Boolean(wallet)} aria-label="Midnight network"><option value="preview">PREVIEW</option><option value="preprod">PREPROD</option></select></label>
           <button className="icon-button theme-button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-          <button className={walletConnected ? 'wallet-button connected' : 'wallet-button'} onClick={onWallet}>
-            <WalletCards size={16} /> {walletConnected ? '0x7f…e24c' : 'Demo wallet'}
+          <button className={wallet ? 'wallet-button connected' : 'wallet-button'} onClick={onWallet} disabled={walletConnecting} title={wallet?.address}>
+            <WalletCards size={16} /> {walletConnecting ? 'Connecting…' : wallet ? shortenMidnightAddress(wallet.address) : 'Connect Lace'}
           </button>
           <button className="icon-button menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle navigation">
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -147,10 +185,9 @@ function PageIntro({ eyebrow, title, body, aside }: { eyebrow: string; title: Re
   );
 }
 
-function VotePage({ walletConnected, onOpenGuide }: { walletConnected: boolean; onOpenGuide: () => void }) {
+function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | null; onOpenGuide: () => void }) {
   const [choice, setChoice] = useState(options[0].id);
   const [ballotState, setBallotState] = useState<BallotState>('ready');
-  const [receipt, setReceipt] = useState('0x7f23a88c34d…9e92a10c14f');
   const [ballots, setBallots] = useState(1_284);
   const [seconds, setSeconds] = useState(12 * 60 * 60 + 44 * 60 + 2);
 
@@ -167,13 +204,8 @@ function VotePage({ walletConnected, onOpenGuide }: { walletConnected: boolean; 
   }, [seconds]);
 
   function castBallot() {
-    if (ballotState !== 'ready') return;
-    setBallotState('proving');
-    window.setTimeout(() => {
-      setBallotState('cast');
-      setBallots((count) => count + 1);
-      setReceipt(`0x${crypto.getRandomValues(new Uint32Array(3)).join('').slice(0, 18)}…kiri`);
-    }, 1_250);
+    if (!wallet || ballotState !== 'ready') return;
+    setBallotState('deployment-required');
   }
 
   return (
@@ -204,20 +236,19 @@ function VotePage({ walletConnected, onOpenGuide }: { walletConnected: boolean; 
               );
             })}
           </div>
-          <button className={ballotState === 'cast' ? 'primary-button success' : 'primary-button'} onClick={castBallot} disabled={ballotState === 'proving' || ballotState === 'cast'}>
-            {ballotState === 'ready' && <><LockKeyhole size={17} /> {walletConnected ? 'Cast private ballot' : 'Connect demo wallet to vote'}</>}
-            {ballotState === 'proving' && <><Orbit className="spin" size={17} /> Generating local proof…</>}
-            {ballotState === 'cast' && <><ShieldCheck size={17} /> Private ballot sealed</>}
+          <button className="primary-button" onClick={castBallot} disabled={!wallet || ballotState === 'deployment-required'}>
+            {ballotState === 'ready' && <><LockKeyhole size={17} /> {wallet ? 'Cast private ballot' : 'Connect Lace to vote'}</>}
+            {ballotState === 'deployment-required' && <><Info size={17} /> Deploy contract to enable voting</>}
           </button>
-          <p className="helper-text"><Info size={14} /> Demo mode only. No wallet data or assets leave this browser.</p>
+          <p className="helper-text"><Info size={14} /> {wallet ? `Connected to Midnight ${wallet.network}. Ballot calls unlock only after the real contract address and ZK artifacts are configured.` : 'Connect a Lace wallet on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
         </article>
 
         <aside className="proof-column reveal delay-2">
           <article className="manga-panel proof-panel">
             <div className="panel-heading"><div><p className="eyebrow signal"><span /> PROOF TRACE</p><h2>What KageVote proves</h2></div><ShieldCheck className="signal-icon" size={22} /></div>
             <ProofStep number="01" title="Eligibility witness" body="Your member credential is checked locally." state="verified" />
-            <ProofStep number="02" title="Ballot selection" body="Your option remains a private witness." state={ballotState === 'ready' ? 'waiting' : 'verified'} />
-            <ProofStep number="03" title="Aggregate tally" body="The public counter updates without a voter map." state={ballotState === 'cast' ? 'verified' : 'waiting'} />
+            <ProofStep number="02" title="Ballot selection" body="Your option remains a private witness." state="waiting" />
+            <ProofStep number="03" title="Aggregate tally" body="The public counter updates without a voter map." state="waiting" />
             <div className="proof-total"><span>PUBLIC BALLOTS RECORDED</span><strong>{ballots.toLocaleString()}</strong></div>
           </article>
           <button className="kiri-callout" onClick={onOpenGuide}>
@@ -227,10 +258,10 @@ function VotePage({ walletConnected, onOpenGuide }: { walletConnected: boolean; 
         </aside>
       </section>
 
-      {ballotState === 'cast' && (
+      {ballotState === 'deployment-required' && (
         <section className="receipt-banner reveal">
-          <div><span className="eyebrow signal"><span /> PRIVATE RECEIPT CREATED</span><h2>Proof accepted in local simulation.</h2><p>Your exact choice is never shown in this receipt.</p></div>
-          <button onClick={() => navigator.clipboard?.writeText(receipt)}><Copy size={15} /> {receipt}</button>
+          <div><span className="eyebrow"><span /> LIVE WALLET VERIFIED</span><h2>Deployment is the remaining gate.</h2><p>Lace is connected, but KageVote will not fabricate a ballot receipt until the Preprod contract, generated types, and ZK artifacts are deployed.</p></div>
+          <Link className="receipt-action" to="/launchpad"><FileCode2 size={15} /> Open launchpad</Link>
         </section>
       )}
 

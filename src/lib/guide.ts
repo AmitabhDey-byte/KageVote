@@ -32,8 +32,8 @@ const replies: Array<{ matches: string[]; reply: GuideReply }> = [
   {
     matches: ['wallet', 'connect', 'preprod', 'network'],
     reply: {
-      title: 'You are in simulator mode.',
-      body: 'This interface simulates wallet connection and ballot proofs until a Midnight Preprod wallet adapter and deployed contract address are configured. No assets move in the demo.',
+      title: 'Connect Lace on the selected network.',
+      body: 'KageVote can connect a compatible Midnight wallet extension on Preview or Preprod and confirm its shielded address. A real ballot stays locked until a deployed contract address and generated ZK artifacts are configured.',
       action: 'Open the launchpad',
     },
   },

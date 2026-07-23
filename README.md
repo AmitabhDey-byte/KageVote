@@ -4,7 +4,7 @@
 
 KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a voter proves eligibility locally, seals a ballot without revealing their choice, and the community verifies the proposal lifecycle and aggregate result.
 
-> Status: functional local demo. The UI, local proof simulation, theme system, Kiri guide, Gemini-ready server proxy, Compact source, tests, and CI are included. A real Preprod deployment is intentionally **not** claimed because this workstation does not yet have the official Compact compiler, Docker/proof server, or a funded Preprod wallet.
+> Status: the app now uses Midnight's DApp Connector to connect a compatible wallet extension (such as Lace) on **Preview** or **Preprod** and display its confirmed shielded address. A real contract call is intentionally not claimed yet because this workstation does not have the official Compact compiler, Docker/proof server, generated ZK artifacts, or a deployed/funded contract.
 
 ## Initial product idea
 
@@ -12,7 +12,8 @@ KageVote brings private voting to communities that need credible outcomes withou
 
 ## Features
 
-- Usable voting-chamber demo: choose an option, simulate local proof generation, and receive a private receipt.
+- Real wallet-extension connection through `window.midnight`: choose Preview or Preprod, connect Lace, validate the returned network, and display the shielded address.
+- Safe live-voting gate: the interface refuses to fabricate a receipt or submit a ballot until the contract address, generated contract client, and ZK artifacts exist.
 - Light and dark modes, persisted locally.
 - Five navigable product views: voting chamber, proposal archive, privacy model, Kiri guide, and developer launchpad.
 - Kiri, an original in-app privacy guide with safe local fallbacks and an optional Gemini server integration.
@@ -43,6 +44,15 @@ npm run dev
 
 Open the Vite address shown in the terminal (normally `http://localhost:5173`). The UI connects to the local API at port `8787` through Vite’s proxy.
 
+### Connect Lace on Preview or Preprod
+
+1. Install and unlock a Midnight-compatible Lace wallet.
+2. Select `PREVIEW` or `PREPROD` in KageVote’s network picker.
+3. In Lace, switch to the same Midnight network and configure its proving service as required by the network.
+4. Click **Connect Lace** and approve the wallet prompt.
+
+KageVote discovers the wallet from the official DApp Connector injection (`window.midnight`), calls `connect(network)`, and validates the returned connection/network before it displays the shielded address. It only asks the wallet for connection configuration, status, shielded address, and DUST balance capability; it does not request a seed phrase or initiate a transfer. Midnight documents this connector pattern and its wallet-controlled service configuration in the [DApp Connector API](https://docs.midnight.network/api-reference/dapp-connector).
+
 ```bash
 npm test
 npm run typecheck
@@ -72,7 +82,7 @@ Before a real deployment:
 3. Provision a funded Preprod wallet outside the repository.
 4. Run `npm run prepare:preprod`, which calls `compact compile contracts/KageVote.compact --output managed`.
 5. Add the generated `managed/` circuits and keys, then record the actual deployed address in a release note or deployment file.
-6. Replace the local simulator with the selected Midnight wallet adapter and contract call layer.
+6. Generate the contract TypeScript client and wire `castPrivateBallot` to Midnight.js. The connector is already in place; the remaining call must use the compiled contract, wallet proving provider, ZK artifact provider, `balanceUnsealedTransaction`, and `submitTransaction`.
 
 The contract’s design follows Midnight’s public-ledger / private-witness model: [Compact language overview](https://midnight.network/blog/compact-the-smart-contract-language-of-midnight) and [Midnight network overview](https://midnight.network/overview).
 
@@ -93,6 +103,6 @@ The GitHub Actions workflow runs contract source validation, type checking, four
 
 ## Important limitations
 
-- This is a UI and proof-flow simulator until a real wallet, proof server, and Preprod deployment are configured.
+- Wallet connection is real when a compatible Lace extension is installed and confirms the selected Preview/Preprod network. Ballot submission is not enabled until the proof server, generated artifacts, and deployed contract are present.
 - The included Compact contract is deliberately a first-cycle foundation; it counts valid participation but does not yet implement production-grade encrypted ballot storage, nullifiers, authority checks, or final tally aggregation.
 - Do not use it for real elections or handling funds without a formal security review and a completed protocol design.

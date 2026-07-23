@@ -20,6 +20,7 @@
     "prepare:preprod": "npm run contract:check && npm run contract:compile"
   },
   "dependencies": {
+    "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
     "@vitejs/plugin-react": "latest",
     "express": "latest",
     "lucide-react": "latest",
