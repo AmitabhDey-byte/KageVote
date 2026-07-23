@@ -1,0 +1,98 @@
+# KageVote
+
+[![KageVote CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
+KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a voter proves eligibility locally, seals a ballot without revealing their choice, and the community verifies the proposal lifecycle and aggregate result.
+
+> Status: functional local demo. The UI, local proof simulation, theme system, Kiri guide, Gemini-ready server proxy, Compact source, tests, and CI are included. A real Preprod deployment is intentionally **not** claimed because this workstation does not yet have the official Compact compiler, Docker/proof server, or a funded Preprod wallet.
+
+## Initial product idea
+
+KageVote brings private voting to communities that need credible outcomes without turning participation into a public social graph. Members prove they satisfy an eligibility rule through a local witness, while their identity and ballot selection remain private. A proposal’s text, timing, proof-validity signals, and aggregate final tally remain public so the community can audit the decision without being able to reconstruct who voted for what.
+
+## Features
+
+- Usable voting-chamber demo: choose an option, simulate local proof generation, and receive a private receipt.
+- Light and dark modes, persisted locally.
+- Five navigable product views: voting chamber, proposal archive, privacy model, Kiri guide, and developer launchpad.
+- Kiri, an original in-app privacy guide with safe local fallbacks and an optional Gemini server integration.
+- Responsive manga-panel visual system with reduced-motion support.
+- Compact starter contract with public ledger state, local witnesses, and deliberate `disclose()` use.
+
+## Privacy model
+
+| Data | Observer can learn? | Reason |
+| --- | --- | --- |
+| Proposal text and ID | Yes | A community needs a common object to decide on. |
+| Voting window | Yes | Anyone can verify when a ballot can be accepted. |
+| Aggregate participation / final tally | Yes | The collective result needs auditability. |
+| Wallet address or identity | No | Eligibility is proven from a private witness. |
+| Ballot choice | No | It is a private witness and is never assigned to public ledger state. |
+| Credential evidence | No | The circuit proves the rule outcome, not the underlying credential. |
+
+`disclose()` is used only for the eligibility predicate and a range-validity predicate in the starter contract. The raw credential and raw ballot selection are not disclosed or written to the public ledger. This first-cycle contract deliberately exposes only aggregate participation; production tally encryption / aggregation must be added before claiming private-choice tallies on a live network.
+
+## Run locally
+
+Prerequisite: Node 22+.
+
+```bash
+npm install
+npm run dev
+```
+
+Open the Vite address shown in the terminal (normally `http://localhost:5173`). The UI connects to the local API at port `8787` through Vite’s proxy.
+
+```bash
+npm test
+npm run typecheck
+npm run build
+npm run contract:check
+```
+
+## Optional Gemini-powered Kiri
+
+Kiri works out of the box with local, privacy-scoped replies. To enable Gemini answers, copy `.env.example` to `.env` and configure the secret **on the server only**:
+
+```bash
+GEMINI_API_KEY=your_restricted_key
+GEMINI_MODEL=gemini-3.5-flash
+```
+
+Never place the key in a `VITE_*` variable, frontend bundle, or repository. The Express endpoint in `server/index.mjs` holds the key, constrains Kiri’s scope, and falls back to local replies if it is absent. See the [Gemini API reference](https://ai.google.dev/api) for current server-side API guidance.
+
+## Midnight contract and Preprod path
+
+The Compact starter is at [`contracts/KageVote.compact`](contracts/KageVote.compact). It has public proposal state plus private witness declarations. `npm run contract:check` validates the expected privacy primitives without pretending to be a compiler.
+
+Before a real deployment:
+
+1. Install the official Midnight Compact compiler so `compact compile` resolves to the compiler, not Windows’ built-in `compact.exe`.
+2. Install Docker and run the Midnight proof server required by your selected network setup.
+3. Provision a funded Preprod wallet outside the repository.
+4. Run `npm run prepare:preprod`, which calls `compact compile contracts/KageVote.compact --output managed`.
+5. Add the generated `managed/` circuits and keys, then record the actual deployed address in a release note or deployment file.
+6. Replace the local simulator with the selected Midnight wallet adapter and contract call layer.
+
+The contract’s design follows Midnight’s public-ledger / private-witness model: [Compact language overview](https://midnight.network/blog/compact-the-smart-contract-language-of-midnight) and [Midnight network overview](https://midnight.network/overview).
+
+## Project structure
+
+```text
+src/                    React voting UI, routes, styles, local Kiri guide
+server/index.mjs        Server-side Gemini proxy (optional)
+contracts/KageVote.compact
+scripts/check-contract.mjs
+public/assets/kiri-guide.png
+.github/workflows/ci.yml
+```
+
+## CI
+
+The GitHub Actions workflow runs contract source validation, type checking, four tests, and the production build on every push and pull request. The workflow will appear after this repository is pushed to GitHub.
+
+## Important limitations
+
+- This is a UI and proof-flow simulator until a real wallet, proof server, and Preprod deployment are configured.
+- The included Compact contract is deliberately a first-cycle foundation; it counts valid participation but does not yet implement production-grade encrypted ballot storage, nullifiers, authority checks, or final tally aggregation.
+- Do not use it for real elections or handling funds without a formal security review and a completed protocol design.
