@@ -1,0 +1,38 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// This ledger state is intentionally public. It lets observers verify the
+// proposal lifecycle and aggregate participation, never an individual choice.
+export ledger proposalId: Uint<64>;
+export ledger ballotWindowOpen: Boolean;
+export ledger totalBallots: Counter;
+
+// Witnesses are supplied locally by the application during proof generation.
+// They are private inputs: neither the credential nor the vote choice is
+// written to the public ledger by this starter circuit.
+witness eligibleMember(): Boolean;
+witness privateVoteChoice(): Uint<2>;
+
+constructor() {
+  proposalId = 824;
+  ballotWindowOpen = true;
+}
+
+export circuit castPrivateBallot(): [] {
+  assert(ballotWindowOpen, "Voting window is closed");
+
+  // disclose() is deliberate: only the boolean outcome of the eligibility
+  // predicate is made available to the circuit verifier. The credential stays
+  // private. `privateVoteChoice()` is evaluated by the local witness layer and
+  // is intentionally not assigned to public ledger state in this first-cycle
+  // contract.
+  assert(disclose(eligibleMember()), "Eligibility proof failed");
+  assert(disclose(privateVoteChoice() < 3), "Invalid ballot choice");
+
+  totalBallots.increment(1);
+}
+
+export circuit closeBallotWindow(): [] {
+  ballotWindowOpen = false;
+}
