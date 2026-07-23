@@ -189,6 +189,7 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
   const [choice, setChoice] = useState(options[0].id);
   const [ballotState, setBallotState] = useState<BallotState>('ready');
   const [ballots, setBallots] = useState(1_284);
+  const [addressCopied, setAddressCopied] = useState(false);
   const [seconds, setSeconds] = useState(12 * 60 * 60 + 44 * 60 + 2);
 
   useEffect(() => {
@@ -206,6 +207,13 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
   function castBallot() {
     if (!wallet || ballotState !== 'ready') return;
     setBallotState('deployment-required');
+  }
+
+  async function copyWalletAddress() {
+    if (!wallet) return;
+    await navigator.clipboard?.writeText(wallet.address);
+    setAddressCopied(true);
+    window.setTimeout(() => setAddressCopied(false), 1_800);
   }
 
   return (
@@ -241,7 +249,7 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
             {ballotState === 'deployment-required' && <><Info size={17} /> Deploy contract to enable voting</>}
           </button>
           <p className="helper-text"><Info size={14} /> {wallet ? `Connected to Midnight ${wallet.network}. Ballot calls unlock only after the real contract address and ZK artifacts are configured.` : 'Connect a Lace wallet on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
-          {wallet && <div className="live-wallet-row"><span><i /> {wallet.walletName} CONNECTED // {wallet.network.toUpperCase()}</span><button onClick={() => navigator.clipboard?.writeText(wallet.address)} title="Copy shielded address"><Copy size={14} /> {shortenMidnightAddress(wallet.address)}</button></div>}
+          {wallet && <div className="live-wallet-row"><span><i /> {wallet.walletName} CONNECTED // {wallet.network.toUpperCase()}</span><button onClick={() => void copyWalletAddress()} title="Copy shielded address" aria-live="polite">{addressCopied ? <Check size={14} /> : <Copy size={14} />}{addressCopied ? 'COPIED' : shortenMidnightAddress(wallet.address)}</button></div>}
         </article>
 
         <aside className="proof-column reveal delay-2">
