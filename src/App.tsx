@@ -241,6 +241,7 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
             {ballotState === 'deployment-required' && <><Info size={17} /> Deploy contract to enable voting</>}
           </button>
           <p className="helper-text"><Info size={14} /> {wallet ? `Connected to Midnight ${wallet.network}. Ballot calls unlock only after the real contract address and ZK artifacts are configured.` : 'Connect a Lace wallet on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
+          {wallet && <div className="live-wallet-row"><span><i /> {wallet.walletName} CONNECTED // {wallet.network.toUpperCase()}</span><button onClick={() => navigator.clipboard?.writeText(wallet.address)} title="Copy shielded address"><Copy size={14} /> {shortenMidnightAddress(wallet.address)}</button></div>}
         </article>
 
         <aside className="proof-column reveal delay-2">

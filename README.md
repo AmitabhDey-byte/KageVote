@@ -53,6 +53,8 @@ Open the Vite address shown in the terminal (normally `http://localhost:5173`). 
 
 KageVote discovers the wallet from the official DApp Connector injection (`window.midnight`), calls `connect(network)`, and validates the returned connection/network before it displays the shielded address. It only asks the wallet for connection configuration, status, shielded address, and DUST balance capability; it does not request a seed phrase or initiate a transfer. Midnight documents this connector pattern and its wallet-controlled service configuration in the [DApp Connector API](https://docs.midnight.network/api-reference/dapp-connector).
 
+If the connection is not detected, unlock Lace, confirm that its Midnight network matches KageVote’s network picker, then refresh the page. Once connected, the voting chamber displays a copyable, shortened version of the confirmed shielded address.
+
 ```bash
 npm test
 npm run typecheck
