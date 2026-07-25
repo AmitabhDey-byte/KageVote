@@ -1,0 +1,27 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Veil Allowlist is the first-cycle Midnight contract submitted with this
+// project. The ledger exposes only whether the gate is open and the aggregate
+// number of successful entries; the member credential is supplied privately.
+export ledger gateOpen: Boolean;
+export ledger successfulEntries: Counter;
+
+// The allowlist credential remains local to the prover. Only the Boolean rule
+// result is deliberately disclosed to the verifier.
+witness allowlistedMember(): Boolean;
+
+constructor() {
+  gateOpen = true;
+}
+
+export circuit provePrivateAccess(): [] {
+  assert(gateOpen, "The private access gate is closed");
+  assert(disclose(allowlistedMember()), "Allowlist proof failed");
+  successfulEntries.increment(1);
+}
+
+export circuit closeGate(): [] {
+  gateOpen = false;
+}

@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "contract:check": "node scripts/check-contract.mjs",
-    "contract:compile": "compact compile contracts/KageVote.compact --output managed",
+    "contract:compile": "compact compile contracts/veil-allowlist.compact managed && compact compile contracts/KageVote.compact managed/kage-vote",
     "prepare:preprod": "npm run contract:check && npm run contract:compile"
   },
   "dependencies": {

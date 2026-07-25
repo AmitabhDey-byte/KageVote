@@ -2,6 +2,14 @@ import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-ap
 
 export type MidnightNetwork = 'preview' | 'preprod';
 
+// These identifiers are passed unchanged to 1AM's Midnight DApp Connector.
+// Each network must receive its own real deployed contract address after an
+// on-chain deployment; addresses are never shared between Preview and Preprod.
+export const MIDNIGHT_NETWORKS: Record<MidnightNetwork, { connectorNetworkId: MidnightNetwork; label: string }> = {
+  preview: { connectorNetworkId: 'preview', label: 'PREVIEW' },
+  preprod: { connectorNetworkId: 'preprod', label: 'PREPROD' },
+};
+
 export type MidnightWalletConnection = {
   api: ConnectedAPI;
   address: string;
@@ -28,6 +36,11 @@ function supportsConnector(api: InitialAPI) {
   return major === supportedApiMajor;
 }
 
+function isOneAmWallet(wallet: Pick<InjectedMidnightWallet, 'name' | 'rdns'>) {
+  const fingerprint = `${wallet.name} ${wallet.rdns}`.toLowerCase();
+  return fingerprint.includes('1am') || fingerprint.includes('oneam');
+}
+
 function injectedWallets() {
   return Object.entries(window.midnight ?? {}).map(([walletId, api]) => ({ walletId, api }));
 }
@@ -40,6 +53,11 @@ export function getInjectedWallets() {
     rdns: api.rdns,
     walletId,
   }));
+}
+
+export function getPreferredWalletId(wallets = getInjectedWallets()) {
+  const compatibleWallets = wallets.filter((wallet) => wallet.compatible);
+  return compatibleWallets.find(isOneAmWallet)?.walletId ?? compatibleWallets[0]?.walletId ?? '';
 }
 
 export async function connectMidnightWallet(network: MidnightNetwork, walletId?: string): Promise<MidnightWalletConnection> {
@@ -55,7 +73,7 @@ export async function connectMidnightWallet(network: MidnightNetwork, walletId?:
 
   const selected = walletId
     ? compatibleWallets.find((wallet) => wallet.walletId === walletId)
-    : compatibleWallets[0];
+    : compatibleWallets.find(({ api }) => isOneAmWallet(api)) ?? compatibleWallets[0];
   if (!selected) {
     throw new MidnightWalletError('The selected Midnight wallet is no longer available. Refresh the page and choose 1AM or Lace again.');
   }

@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../../",
+  "sources": ["contracts/KageVote.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAgBA;;;;;;;;;;;;;;;;MAKA,AAAA,iBAYC;;;;;;;;;;;;;;;;;;;;;;OAAA;MAED,AAAA,iBAEC;;;;;;;;;;;;;;;;;;;;;;OAAA;;;;;;;;;;GAlBA;EAHD;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAVA;;;;;;;;;yEAAmC;IACnC;;;;;;;;;yEAAwC;IACxC;;;;;;;;;yEAAoC;UASlC,KAAU;IAAV;;;;;;;2HAAA,KAAU;;yEAAA;IACV;;;;;;;;;yEAAgB;;;;;;;GACjB;EAND,AAAA,iBAAkC;;0DAAlC,cAAkC;;;;;;;;;;;;;;GAAA;EAClC,AAAA,oBAAqC;;0DAArC,iBAAqC;;;;;;;;;;;;;;GAAA;EAOrC,AAAA,oBAYC;oDAXQ;;;;;;;;;;;yHAAgB;;;;QAQP,GAAuB;;;6BAAvB,GAAuB;;UAEvC,KAAY;IAAZ;;;;;;;;;;6FAAA,KAAY;;;;wEAAA;;GACb;EAED,AAAA,oBAEC;IADC;;;;;;;;;yEAAgB;;GACjB;;;;;;;;;;;;;;;;IA/BD;qCAAA;;;;;;;;;;;0GAAmC;KAAA;IACnC;qCAAA;;;;;;;;;;;0GAAwC;KAAA;IACxC;qCAAA;;;;;;;;;;;0GAAoC;KAAA;;;;;;;;;;;;;"
+}

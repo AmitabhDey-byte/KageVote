@@ -15,6 +15,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Install Midnight Compact
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/compact" update
+      - name: Compile Veil Allowlist
+        run: npm run contract:compile
       - run: npm run contract:check
       - run: npm run typecheck
       - run: npm test

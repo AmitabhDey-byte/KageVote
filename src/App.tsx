@@ -29,6 +29,8 @@ import { localGuideReply, starterQuestions } from './lib/guide';
 import {
   connectMidnightWallet,
   getInjectedWallets,
+  getPreferredWalletId,
+  MIDNIGHT_NETWORKS,
   shortenMidnightAddress,
   type InjectedMidnightWallet,
   type MidnightNetwork,
@@ -80,7 +82,7 @@ function App() {
   function refreshWalletOptions() {
     const detected = getInjectedWallets().filter((candidate) => candidate.compatible);
     setWalletOptions(detected);
-    setWalletId((current) => detected.some((candidate) => candidate.walletId === current) ? current : (detected[0]?.walletId ?? ''));
+    setWalletId((current) => detected.some((candidate) => candidate.walletId === current) ? current : getPreferredWalletId(detected));
     return detected;
   }
 
@@ -102,7 +104,7 @@ function App() {
     setWalletError('');
     try {
       const detected = refreshWalletOptions();
-      const selectedWalletId = detected.some((candidate) => candidate.walletId === walletId) ? walletId : detected[0]?.walletId;
+      const selectedWalletId = detected.some((candidate) => candidate.walletId === walletId) ? walletId : getPreferredWalletId(detected);
       const connection = await connectMidnightWallet(walletNetwork, selectedWalletId);
       setWallet(connection);
     } catch (error) {
@@ -185,7 +187,7 @@ function AppHeader({
           ))}
         </nav>
         <div className="header-actions">
-          <label className="network-picker"><i /><span>NETWORK</span><select value={walletNetwork} onChange={(event) => onNetworkChange(event.target.value as MidnightNetwork)} disabled={Boolean(wallet)} aria-label="Midnight network"><option value="preview">PREVIEW</option><option value="preprod">PREPROD</option></select></label>
+          <label className="network-picker"><i /><span>NETWORK</span><select value={walletNetwork} onChange={(event) => onNetworkChange(event.target.value as MidnightNetwork)} disabled={Boolean(wallet)} aria-label="Midnight network">{Object.entries(MIDNIGHT_NETWORKS).map(([network, config]) => <option key={network} value={network}>{config.label}</option>)}</select></label>
           <label className="network-picker wallet-picker"><WalletCards size={13} /><span>WALLET</span><select value={walletId} onChange={(event) => onWalletChoice(event.target.value)} disabled={Boolean(wallet)} aria-label="Midnight wallet">
             {!walletOptions.length && <option value="">DETECT WALLET</option>}
             {walletOptions.map((candidate) => <option key={candidate.walletId} value={candidate.walletId}>{candidate.name.toUpperCase()}</option>)}

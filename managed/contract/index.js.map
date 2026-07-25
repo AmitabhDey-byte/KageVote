@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../",
+  "sources": ["contracts/veil-allowlist.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAcA;;;;;;;;;;;;;MAIA,AAAA,kBAIC;;;;;;;;;;;;;;;;;;;;;;OAAA;MAED,AAAA,SAEC;;;;;;;;;;;;;;;;;;;;;;OAAA;;;;;;;;;;GAVA;EAFD;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAPA;;;;;;;;;yEAAgC;IAChC;;;;;;;;;yEAAyC;IAOvC;;;;;;;;;yEAAQ;;;;;;;GACT;EAJD,AAAA,oBAAqC;;0DAArC,iBAAqC;;;;;;;;;;;;;;GAAA;EAMrC,AAAA,qBAIC;oDAHQ;;;;;;;;;;;yHAAQ;;;;UAEf,KAAiB;IAAjB;;;;;;;;;;6FAAA,KAAiB;;;;wEAAA;;GAClB;EAED,AAAA,YAEC;IADC;;;;;;;;;yEAAQ;;GACT;;;;;;;;;;;;;;;;IAnBD;qCAAA;;;;;;;;;;;0GAAgC;KAAA;IAChC;qCAAA;;;;;;;;;;;0GAAyC;KAAA;;;;;;;;;;;;"
+}

@@ -4,7 +4,7 @@
 
 KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a voter proves eligibility locally, seals a ballot without revealing their choice, and the community verifies the proposal lifecycle and aggregate result.
 
-> Status: the app uses Midnight's DApp Connector to discover and connect **1AM** or **Lace** on **Preview** or **Preprod**, then displays the confirmed shielded address. It is configured for Vercel: the Vite SPA is statically deployed and Kiri's optional Gemini proxy runs as a serverless function. A real contract call is intentionally not claimed yet because this workstation does not have the official Compact compiler, Docker/proof server, generated ZK artifacts, or a deployed/funded contract.
+> Status: KageVote uses 1AM as the preferred Midnight wallet on both **Preview** and **Preprod**. **Preprod is the single target network for the contract deployment record.** The Vite app is Vercel-ready and Kiri's optional Gemini proxy runs server-side. No contract address is claimed until a funded 1AM wallet approves a real Preprod deployment.
 
 ## Initial product idea
 
@@ -12,7 +12,7 @@ KageVote brings private voting to communities that need credible outcomes withou
 
 ## Features
 
-- Real multi-wallet connection through `window.midnight`: choose 1AM or Lace, select Preview or Preprod, validate the returned network, and display the shielded address.
+- Real multi-wallet connection through `window.midnight`: 1AM is preferred by default for both Preview and Preprod; Lace remains an explicit fallback. The app validates the returned network and displays the shielded address.
 - Safe live-voting gate: the interface refuses to fabricate a receipt or submit a ballot until the contract address, generated contract client, and ZK artifacts exist.
 - Light and dark modes, persisted locally.
 - Five navigable product views: voting chamber, proposal archive, privacy model, Kiri guide, and developer launchpad.
@@ -54,6 +54,8 @@ Open the Vite address shown in the terminal (normally `http://localhost:5173`). 
 
 KageVote discovers each compatible wallet from the official DApp Connector injection (`window.midnight`) and lets the user select it before calling `connect(network)`. It validates the returned connection/network before displaying the shielded address. It only asks the wallet for connection configuration, status, shielded address, and DUST-balance capability; it does not request a seed phrase or initiate a transfer. Midnight documents multi-wallet selection and its wallet-controlled service configuration in the [DApp Connector API](https://docs.midnight.network/api-reference/dapp-connector).
 
+`src/lib/midnightWallet.ts` explicitly configures 1AM for both connector network IDs: `preview` and `preprod`. KageVote prefers 1AM whenever it is injected, and passes the selected ID unchanged to `connect(network)`. A contract must be deployed separately on each network, so Preview and Preprod will have different real contract addresses.
+
 If the connection is not detected, unlock 1AM or Lace, confirm that its Midnight network matches KageVote's network picker, then refresh the page. Once connected, the voting chamber displays a copyable, shortened version of the confirmed shielded address.
 
 ```bash
@@ -85,18 +87,26 @@ Vercel automatically serves functions placed in the root `api/` directory, and i
 
 ## Midnight contract and Preprod path
 
-The Compact starter is at [`contracts/KageVote.compact`](contracts/KageVote.compact). It has public proposal state plus private witness declarations. `npm run contract:check` validates the expected privacy primitives without pretending to be a compiler.
+The primary rubric contract is [`contracts/veil-allowlist.compact`](contracts/veil-allowlist.compact): it proves private allowlist membership with a witness, deliberately discloses only the Boolean rule outcome, and records only aggregate successful entries as public state. The voting prototype remains at [`contracts/KageVote.compact`](contracts/KageVote.compact). `npm run contract:check` validates the privacy primitives in both contracts.
+
+`managed/` is checked in and was generated from Veil Allowlist by the official Compact compiler `0.31.1`. It contains the generated client, ZKIR circuits, and prover/verifier keys; see [`managed/compiler/contract-info.json`](managed/compiler/contract-info.json) for compiler-produced metadata and [`managed/README.md`](managed/README.md) for regeneration instructions.
 
 Before a real deployment:
 
 1. Install the official Midnight Compact compiler so `compact compile` resolves to the compiler, not Windows’ built-in `compact.exe`.
 2. Install Docker and run the Midnight proof server required by your selected network setup.
 3. Provision a funded Preprod wallet outside the repository.
-4. Run `npm run prepare:preprod`, which calls `compact compile contracts/KageVote.compact --output managed`.
-5. Add the generated `managed/` circuits and keys, then record the actual deployed address in a release note or deployment file.
+4. Run `npm run prepare:preprod`, which calls `compact compile contracts/veil-allowlist.compact managed`.
+5. The generated `managed/` circuits and keys are already checked in. After successful deployment, record the actual verified network and address in `deployment/preprod.json`; do not use a placeholder address.
 6. Generate the contract TypeScript client and wire `castPrivateBallot` to Midnight.js. The connector is already in place; the remaining call must use the compiled contract, wallet proving provider, ZK artifact provider, `balanceUnsealedTransaction`, and `submitTransaction`.
 
 The contract’s design follows Midnight’s public-ledger / private-witness model: [Compact language overview](https://midnight.network/blog/compact-the-smart-contract-language-of-midnight) and [Midnight network overview](https://midnight.network/overview).
+
+### Network-specific deployment records
+
+- Preview: deployment requires a funded 1AM Preview wallet; record its complete address and transaction hash after approval.
+- Preprod: deployment requires a funded 1AM Preprod wallet; record its complete address and transaction hash after approval.
+- Never copy an address between the networks or submit a shortened/placeholder address.
 
 ## Project structure
 
@@ -112,7 +122,7 @@ public/assets/kiri-guide.png
 
 ## CI
 
-The GitHub Actions workflow runs contract source validation, type checking, four tests, and the production build on every push and pull request. The workflow will appear after this repository is pushed to GitHub.
+The GitHub Actions workflow installs the official Compact compiler, compiles Veil Allowlist to `managed/`, validates the contract source, runs seven tests, type checks, and builds the production app on every push and pull request.
 
 ## Important limitations
 
