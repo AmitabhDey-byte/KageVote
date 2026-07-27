@@ -36,10 +36,10 @@ import {
   type MidnightNetwork,
   type MidnightWalletConnection,
 } from './lib/midnightWallet';
-import { deployVeilAllowlistOnPreview, type PreviewDeployment } from './lib/veilAllowlistDeploy';
+import { castKageVoteBallot, deployKageVoteOnPreview, deployVeilAllowlistOnPreview, type PreviewDeployment } from './lib/veilAllowlistDeploy';
 
 type Theme = 'dark' | 'light';
-type BallotState = 'ready' | 'deployment-required';
+type BallotState = 'ready' | 'deployment-required' | 'submitting' | 'submitted';
 
 const navItems = [
   { to: '/', label: 'Vote' },
@@ -79,6 +79,10 @@ function App() {
   const [walletError, setWalletError] = useState('');
   const [walletConnecting, setWalletConnecting] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [kageVoteDeployment, setKageVoteDeployment] = useState<PreviewDeployment | null>(() => {
+    const saved = window.localStorage.getItem('kagevote-preview-voting-deployment');
+    return saved ? JSON.parse(saved) as PreviewDeployment : null;
+  });
 
   function refreshWalletOptions() {
     const detected = getInjectedWallets().filter((candidate) => candidate.compatible);
@@ -132,11 +136,11 @@ function App() {
       {walletError && <div className="wallet-notice" role="status">{walletError}</div>}
       <main className="content-rail">
         <Routes>
-          <Route path="/" element={<VotePage wallet={wallet} onOpenGuide={() => setGuideOpen(true)} />} />
+          <Route path="/" element={<VotePage wallet={wallet} kageVoteDeployment={kageVoteDeployment} onOpenGuide={() => setGuideOpen(true)} />} />
           <Route path="/proposals" element={<ProposalPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/guide" element={<GuidePage onOpenChat={() => setGuideOpen(true)} />} />
-          <Route path="/launchpad" element={<LaunchpadPage wallet={wallet} />} />
+          <Route path="/launchpad" element={<LaunchpadPage wallet={wallet} onKageVoteDeployment={setKageVoteDeployment} />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
@@ -221,9 +225,10 @@ function PageIntro({ eyebrow, title, body, aside }: { eyebrow: string; title: Re
   );
 }
 
-function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | null; onOpenGuide: () => void }) {
+function VotePage({ wallet, kageVoteDeployment, onOpenGuide }: { wallet: MidnightWalletConnection | null; kageVoteDeployment: PreviewDeployment | null; onOpenGuide: () => void }) {
   const [choice, setChoice] = useState(options[0].id);
   const [ballotState, setBallotState] = useState<BallotState>('ready');
+  const [ballotError, setBallotError] = useState('');
   const [ballots, setBallots] = useState(1_284);
   const [addressCopied, setAddressCopied] = useState(false);
   const [seconds, setSeconds] = useState(12 * 60 * 60 + 44 * 60 + 2);
@@ -240,9 +245,20 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
     return `${hours}:${minutes}:${secs}`;
   }, [seconds]);
 
-  function castBallot() {
+  async function castBallot() {
     if (!wallet || ballotState !== 'ready') return;
-    setBallotState('deployment-required');
+    if (!kageVoteDeployment) { setBallotState('deployment-required'); return; }
+    setBallotError('');
+    setBallotState('submitting');
+    try {
+      const selectedChoice = options.findIndex((option) => option.id === choice);
+      await castKageVoteBallot(wallet.api, wallet.network, kageVoteDeployment.contractAddress, selectedChoice);
+      setBallots((current) => current + 1);
+      setBallotState('submitted');
+    } catch (error) {
+      setBallotError(error instanceof Error ? error.message : 'Private ballot submission did not finalize.');
+      setBallotState('ready');
+    }
   }
 
   async function copyWalletAddress() {
@@ -272,7 +288,7 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
             {options.map((option) => {
               const selected = option.id === choice;
               return (
-                <button key={option.id} className={selected ? 'vote-option selected' : 'vote-option'} onClick={() => { setChoice(option.id); setBallotState('ready'); }} role="radio" aria-checked={selected}>
+                <button key={option.id} className={selected ? 'vote-option selected' : 'vote-option'} onClick={() => { setChoice(option.id); setBallotState('ready'); setBallotError(''); }} role="radio" aria-checked={selected}>
                   <span className="option-index">{option.index}</span>
                   <span className="option-copy"><strong>{option.label}</strong><small>{option.description}</small></span>
                   <span className="option-check">{selected && <Check size={18} />}</span>
@@ -280,11 +296,14 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
               );
             })}
           </div>
-          <button className="primary-button" onClick={castBallot} disabled={!wallet || ballotState === 'deployment-required'}>
+          <button className="primary-button" onClick={() => void castBallot()} disabled={!wallet || ballotState === 'deployment-required' || ballotState === 'submitting' || ballotState === 'submitted'}>
             {ballotState === 'ready' && <><LockKeyhole size={17} /> {wallet ? 'Cast private ballot' : 'Connect wallet to vote'}</>}
             {ballotState === 'deployment-required' && <><Info size={17} /> Deploy contract to enable voting</>}
+            {ballotState === 'submitting' && <><Zap size={17} /> Proving private ballot…</>}
+            {ballotState === 'submitted' && <><Check size={17} /> Private ballot finalized</>}
           </button>
-          <p className="helper-text"><Info size={14} /> {wallet ? `Connected to Midnight ${wallet.network}. Ballot calls unlock only after the real contract address and ZK artifacts are configured.` : 'Choose 1AM or Lace, then connect it on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
+          <p className="helper-text"><Info size={14} /> {wallet ? kageVoteDeployment ? `Connected to Midnight ${wallet.network}. Your ballot is proved locally and submitted to the deployed KageVote contract.` : `Connected to Midnight ${wallet.network}. Deploy the KageVote voting contract from Launchpad to unlock ballot calls.` : 'Choose 1AM or Lace, then connect it on Preview or Preprod. KageVote never requests your seed phrase.'}</p>
+          {ballotError && <p className="helper-text"><Info size={14} /> {ballotError}</p>}
           {!wallet && <div className="wallet-connect-tip"><ShieldCheck size={15} /><span>Choose <strong>1AM</strong> or <strong>Lace</strong>, then choose <strong>Preview</strong> or <strong>Preprod</strong> before connecting.</span></div>}
           {wallet && <div className="live-wallet-row"><span><i /> {wallet.walletName} CONNECTED // {wallet.network.toUpperCase()}</span><button onClick={() => void copyWalletAddress()} title="Copy shielded address" aria-live="polite">{addressCopied ? <Check size={14} /> : <Copy size={14} />}{addressCopied ? 'COPIED' : shortenMidnightAddress(wallet.address)}</button></div>}
         </article>
@@ -306,7 +325,7 @@ function VotePage({ wallet, onOpenGuide }: { wallet: MidnightWalletConnection | 
 
       {ballotState === 'deployment-required' && (
         <section className="receipt-banner reveal">
-          <div><span className="eyebrow"><span /> LIVE WALLET VERIFIED</span><h2>Deployment is the remaining gate.</h2><p>{wallet?.walletName} is connected, but KageVote will not fabricate a ballot receipt until the Preprod contract, generated types, and ZK artifacts are deployed.</p></div>
+          <div><span className="eyebrow"><span /> LIVE WALLET VERIFIED</span><h2>Voting contract is the remaining gate.</h2><p>{wallet?.walletName} is connected, but KageVote will not fabricate a ballot receipt until the dedicated Preview voting contract is deployed.</p></div>
           <Link className="receipt-action" to="/launchpad"><FileCode2 size={15} /> Open launchpad</Link>
         </section>
       )}
@@ -369,7 +388,7 @@ function GuidePage({ onOpenChat }: { onOpenChat: () => void }) {
   </>;
 }
 
-function LaunchpadPage({ wallet }: { wallet: MidnightWalletConnection | null }) {
+function LaunchpadPage({ wallet, onKageVoteDeployment }: { wallet: MidnightWalletConnection | null; onKageVoteDeployment: (deployment: PreviewDeployment) => void }) {
   const [copied, setCopied] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [deployment, setDeployment] = useState<PreviewDeployment | null>(() => {
@@ -377,6 +396,12 @@ function LaunchpadPage({ wallet }: { wallet: MidnightWalletConnection | null }) 
     return saved ? JSON.parse(saved) as PreviewDeployment : null;
   });
   const [deployError, setDeployError] = useState('');
+  const [kageVoteDeploying, setKageVoteDeploying] = useState(false);
+  const [kageVoteDeployment, setKageVoteDeployment] = useState<PreviewDeployment | null>(() => {
+    const saved = window.localStorage.getItem('kagevote-preview-voting-deployment');
+    return saved ? JSON.parse(saved) as PreviewDeployment : null;
+  });
+  const [kageVoteDeployError, setKageVoteDeployError] = useState('');
   const command = 'npm run contract:check';
   function copyCommand() { navigator.clipboard?.writeText(command); setCopied(true); window.setTimeout(() => setCopied(false), 1_800); }
   async function deployPreview() {
@@ -390,6 +415,18 @@ function LaunchpadPage({ wallet }: { wallet: MidnightWalletConnection | null }) 
       setDeployError(error instanceof Error ? error.message : 'Preview deployment failed before a transaction could be finalized.');
     } finally { setDeploying(false); }
   }
+  async function deployVotingContract() {
+    if (!wallet) { setKageVoteDeployError('Connect 1AM on Preview first. KageVote never asks for your seed phrase.'); return; }
+    setKageVoteDeploying(true); setKageVoteDeployError('');
+    try {
+      const result = await deployKageVoteOnPreview(wallet.api, wallet.network);
+      setKageVoteDeployment(result);
+      window.localStorage.setItem('kagevote-preview-voting-deployment', JSON.stringify(result));
+      onKageVoteDeployment(result);
+    } catch (error) {
+      setKageVoteDeployError(error instanceof Error ? error.message : 'KageVote deployment failed before a transaction could be finalized.');
+    } finally { setKageVoteDeploying(false); }
+  }
   return <><PageIntro eyebrow="DEVELOPER LAUNCHPAD" title={<>From local proof<br />to Preview.</>} body="Deploy Veil Allowlist through the connected 1AM wallet. The transaction is built, proved, balanced, and submitted from your browser; Vercel never receives wallet secrets." />
     <section className="launch-grid"><article className="launch-checklist manga-panel reveal"><p className="eyebrow"><span /> PREVIEW DEPLOYMENT</p><h2>Wallet-approved launch</h2><Checklist checked={wallet?.network === 'preview'} label="1AM on Preview" detail={wallet ? `${wallet.walletName} connected on ${wallet.network.toUpperCase()}.` : 'Select Preview and connect 1AM in the header.'} /><Checklist checked label="Compact source + circuits" detail="Veil Allowlist keys and ZKIR are bundled with this deployment." /><Checklist label="Preview network status" detail="The wallet supplies its current indexer and proving service configuration." /><Checklist checked={Boolean(deployment)} label="Contract address" detail={deployment ? deployment.contractAddress : 'Created only after 1AM confirms a successful Preview deployment.'} /><button className="primary-button" onClick={() => void deployPreview()} disabled={!wallet || wallet.network !== 'preview' || deploying || Boolean(deployment)}><Zap size={17} /> {deploying ? 'Awaiting 1AM confirmation…' : deployment ? 'Preview contract deployed' : 'Deploy Veil Allowlist to Preview'}</button>{deployError && <p className="helper-text"><Info size={14} /> {deployError}</p>}{deployment && <div className="live-wallet-row deployment-result"><span><i /> PREVIEW DEPLOYED</span><button onClick={() => void navigator.clipboard?.writeText(deployment.contractAddress)} title="Copy contract address"><Copy size={14} />{shortenMidnightAddress(deployment.contractAddress)}</button><small>TX: {deployment.transactionId}</small></div>}</article>
       <article className="contract-card reveal delay-1"><div className="contract-card-top"><FileCode2 size={22} /><span>contracts/KageVote.compact</span></div><pre><code>{`witness eligibleMember(): Boolean;
@@ -400,7 +437,7 @@ export circuit castPrivateBallot(): [] {
   assert(disclose(eligibleMember()),
     "Eligibility proof failed");
   totalBallots.increment(1);
-}`}</code></pre><p>Public: the aggregate count. Private: eligibility data and the voter’s local witness.</p><button onClick={copyCommand}><Copy size={15} /> {copied ? 'Copied' : command}</button></article></section>
+}`}</code></pre><p>Public: the aggregate count. Private: eligibility data and the voter’s local witness.</p><button onClick={copyCommand}><Copy size={15} /> {copied ? 'Copied' : command}</button><button className="primary-button" onClick={() => void deployVotingContract()} disabled={!wallet || wallet.network !== 'preview' || kageVoteDeploying || Boolean(kageVoteDeployment)}><Zap size={17} /> {kageVoteDeploying ? 'Deploying voting contract…' : kageVoteDeployment ? 'KageVote contract deployed' : 'Deploy KageVote to Preview'}</button>{kageVoteDeployError && <p className="helper-text"><Info size={14} /> {kageVoteDeployError}</p>}{kageVoteDeployment && <div className="live-wallet-row deployment-result"><span><i /> VOTING CONTRACT LIVE</span><button onClick={() => void navigator.clipboard?.writeText(kageVoteDeployment.contractAddress)} title="Copy KageVote contract address"><Copy size={14} />{shortenMidnightAddress(kageVoteDeployment.contractAddress)}</button><small>TX: {kageVoteDeployment.transactionId}</small></div>}</article></section>
     <section className="integration-strip reveal"><Sparkles size={22} /><div><strong>Gemini is optional.</strong><p>Set <code>GEMINI_API_KEY</code> on the server to give Kiri live answers. The browser never receives the key; without it, Kiri uses local privacy responses.</p></div><a href="https://ai.google.dev/api" target="_blank" rel="noreferrer">API docs <ExternalLink size={14} /></a></section>
   </>;
 }

@@ -78,6 +78,8 @@ The deployment happens in the browser through the selected 1AM wallet; it is **n
 
 The browser deployment client at [`src/lib/veilAllowlistDeploy.ts`](src/lib/veilAllowlistDeploy.ts) fetches the bundled ZK keys, follows 1AM's configured Preview indexer/prover endpoints, asks the wallet to balance/sign the transaction, and submits it only through the wallet. If Preview is offline, the transaction cannot finalize and no address will be displayed.
 
+> Important: Veil Allowlist proves private membership; it does **not** contain `castPrivateBallot()`. To submit a real ballot, deploy the separate `contracts/KageVote.compact` contract from the Launchpad's **Deploy KageVote to Preview** button, then cast a ballot against that new contract address.
+
 ```bash
 npm test
 npm run typecheck

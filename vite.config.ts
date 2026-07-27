@@ -6,7 +6,10 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
 
-const veilArtifacts = resolve(__dirname, 'managed');
+const midnightArtifacts = [
+  resolve(__dirname, 'managed'),
+  resolve(__dirname, 'managed/kage-vote'),
+];
 
 function midnightZkAssets() {
   return {
@@ -15,23 +18,29 @@ function midnightZkAssets() {
       server.middlewares.use((request: { url?: string }, response: { setHeader: (name: string, value: string) => void; end: (data: Buffer) => void }, next: () => void) => {
         const match = (request.url ?? '').match(/^\/(keys|zkir)\/([^?#]+)$/);
         if (!match) return next();
-        try {
-          const [, directory, filename] = match;
-          response.setHeader('Content-Type', 'application/octet-stream');
-          response.end(readFileSync(resolve(veilArtifacts, directory, filename)));
-        } catch {
-          next();
+        const [, directory, filename] = match;
+        for (const artifactDirectory of midnightArtifacts) {
+          try {
+            response.setHeader('Content-Type', 'application/octet-stream');
+            response.end(readFileSync(resolve(artifactDirectory, directory, filename)));
+            return;
+          } catch {
+            // Check the next compiled contract directory.
+          }
         }
+        next();
       });
     },
     generateBundle(this: any) {
       for (const directory of ['keys', 'zkir']) {
-        for (const filename of readdirSync(resolve(veilArtifacts, directory))) {
-          this.emitFile({
-            type: 'asset',
-            fileName: `${directory}/${filename}`,
-            source: readFileSync(resolve(veilArtifacts, directory, filename)),
-          });
+        for (const artifactDirectory of midnightArtifacts) {
+          for (const filename of readdirSync(resolve(artifactDirectory, directory))) {
+            this.emitFile({
+              type: 'asset',
+              fileName: `${directory}/${filename}`,
+              source: readFileSync(resolve(artifactDirectory, directory, filename)),
+            });
+          }
         }
       }
     },
