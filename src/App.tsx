@@ -36,6 +36,7 @@ import {
   type MidnightNetwork,
   type MidnightWalletConnection,
 } from './lib/midnightWallet';
+import { deployVeilAllowlistOnPreview, type PreviewDeployment } from './lib/veilAllowlistDeploy';
 
 type Theme = 'dark' | 'light';
 type BallotState = 'ready' | 'deployment-required';
@@ -72,7 +73,7 @@ function useTheme() {
 function App() {
   const { theme, setTheme } = useTheme();
   const [wallet, setWallet] = useState<MidnightWalletConnection | null>(null);
-  const [walletNetwork, setWalletNetwork] = useState<MidnightNetwork>('preprod');
+  const [walletNetwork, setWalletNetwork] = useState<MidnightNetwork>('preview');
   const [walletOptions, setWalletOptions] = useState<InjectedMidnightWallet[]>([]);
   const [walletId, setWalletId] = useState('');
   const [walletError, setWalletError] = useState('');
@@ -135,7 +136,7 @@ function App() {
           <Route path="/proposals" element={<ProposalPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/guide" element={<GuidePage onOpenChat={() => setGuideOpen(true)} />} />
-          <Route path="/launchpad" element={<LaunchpadPage />} />
+          <Route path="/launchpad" element={<LaunchpadPage wallet={wallet} />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
@@ -368,12 +369,29 @@ function GuidePage({ onOpenChat }: { onOpenChat: () => void }) {
   </>;
 }
 
-function LaunchpadPage() {
+function LaunchpadPage({ wallet }: { wallet: MidnightWalletConnection | null }) {
   const [copied, setCopied] = useState(false);
-  const command = 'npm run prepare:preprod';
+  const [deploying, setDeploying] = useState(false);
+  const [deployment, setDeployment] = useState<PreviewDeployment | null>(() => {
+    const saved = window.localStorage.getItem('kagevote-preview-deployment');
+    return saved ? JSON.parse(saved) as PreviewDeployment : null;
+  });
+  const [deployError, setDeployError] = useState('');
+  const command = 'npm run contract:check';
   function copyCommand() { navigator.clipboard?.writeText(command); setCopied(true); window.setTimeout(() => setCopied(false), 1_800); }
-  return <><PageIntro eyebrow="DEVELOPER LAUNCHPAD" title={<>From local proof<br />to Preprod.</>} body="The KageVote UI is a local demo. This launchpad keeps the path to an honest Midnight deployment visible, including the tooling that must exist before a real contract address is shown." />
-    <section className="launch-grid"><article className="launch-checklist manga-panel reveal"><p className="eyebrow"><span /> RELEASE CHECKLIST</p><h2>Preprod readiness</h2><Checklist checked label="Node 22 runtime" detail="Detected for this workspace." /><Checklist label="Compact compiler" detail="Install the official compiler before running contract:compile." /><Checklist label="Proof server / Docker" detail="Required for local proving and deployment validation." /><Checklist label="Funded Preprod wallet" detail="Configure outside this repository; never commit secrets." /><Checklist label="Contract address" detail="Set only after a successful deployment." /></article>
+  async function deployPreview() {
+    if (!wallet) { setDeployError('Connect 1AM on Preview first. KageVote never asks for your seed phrase.'); return; }
+    setDeploying(true); setDeployError('');
+    try {
+      const result = await deployVeilAllowlistOnPreview(wallet.api, wallet.network);
+      setDeployment(result);
+      window.localStorage.setItem('kagevote-preview-deployment', JSON.stringify(result));
+    } catch (error) {
+      setDeployError(error instanceof Error ? error.message : 'Preview deployment failed before a transaction could be finalized.');
+    } finally { setDeploying(false); }
+  }
+  return <><PageIntro eyebrow="DEVELOPER LAUNCHPAD" title={<>From local proof<br />to Preview.</>} body="Deploy Veil Allowlist through the connected 1AM wallet. The transaction is built, proved, balanced, and submitted from your browser; Vercel never receives wallet secrets." />
+    <section className="launch-grid"><article className="launch-checklist manga-panel reveal"><p className="eyebrow"><span /> PREVIEW DEPLOYMENT</p><h2>Wallet-approved launch</h2><Checklist checked={wallet?.network === 'preview'} label="1AM on Preview" detail={wallet ? `${wallet.walletName} connected on ${wallet.network.toUpperCase()}.` : 'Select Preview and connect 1AM in the header.'} /><Checklist checked label="Compact source + circuits" detail="Veil Allowlist keys and ZKIR are bundled with this deployment." /><Checklist label="Preview network status" detail="The wallet supplies its current indexer and proving service configuration." /><Checklist checked={Boolean(deployment)} label="Contract address" detail={deployment ? deployment.contractAddress : 'Created only after 1AM confirms a successful Preview deployment.'} /><button className="primary-button" onClick={() => void deployPreview()} disabled={!wallet || wallet.network !== 'preview' || deploying || Boolean(deployment)}><Zap size={17} /> {deploying ? 'Awaiting 1AM confirmation…' : deployment ? 'Preview contract deployed' : 'Deploy Veil Allowlist to Preview'}</button>{deployError && <p className="helper-text"><Info size={14} /> {deployError}</p>}{deployment && <div className="live-wallet-row deployment-result"><span><i /> PREVIEW DEPLOYED</span><button onClick={() => void navigator.clipboard?.writeText(deployment.contractAddress)} title="Copy contract address"><Copy size={14} />{shortenMidnightAddress(deployment.contractAddress)}</button><small>TX: {deployment.transactionId}</small></div>}</article>
       <article className="contract-card reveal delay-1"><div className="contract-card-top"><FileCode2 size={22} /><span>contracts/KageVote.compact</span></div><pre><code>{`witness eligibleMember(): Boolean;
 
 export ledger totalBallots: Counter;

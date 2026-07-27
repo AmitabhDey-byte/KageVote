@@ -21,7 +21,17 @@
   },
   "dependencies": {
     "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
+    "@midnight-ntwrk/ledger-v8": "^8.1.0",
+    "@midnight-ntwrk/midnight-js-contracts": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-utils": "^4.1.1",
     "@vitejs/plugin-react": "latest",
+    "events": "^3.3.0",
     "express": "latest",
     "lucide-react": "latest",
     "react": "latest",
@@ -34,8 +44,13 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "concurrently": "latest",
+    "esbuild": "^0.28.1",
+    "rollup": "^4.62.3",
     "typescript": "latest",
     "vite": "latest",
+    "vite-plugin-node-polyfills": "^0.28.0",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.6.0",
     "vitest": "latest"
   }
 }
