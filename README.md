@@ -4,7 +4,15 @@
 
 KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a voter proves eligibility locally, seals a ballot without revealing their choice, and the community verifies the proposal lifecycle and aggregate result.
 
-> Status: KageVote uses 1AM as the preferred Midnight wallet on both **Preview** and **Preprod**. **Preview is the active deployment target.** The Vite app is Vercel-ready and the Launchpad creates a wallet-approved Preview deployment only when 1AM and the Midnight network services are available. No contract address is claimed until a real transaction finalizes.
+> Status: KageVote uses 1AM as the preferred Midnight wallet on both **Preview** and **Preprod**. **Preview is the active deployment target.** The Vite app is Vercel-ready and the Launchpad creates a wallet-approved Preview deployment only when 1AM and the Midnight network services are available.
+
+## Verified Midnight Preview deployment
+
+- **Network:** Midnight Preview
+- **Contract address:** `1cf1bfc2defb2ecdd15afd7b9804ce1c189a87a75e0a7d84fdd36b170c1566f0`
+- **Deployment transaction ID:** `0063552d8ffc38816a41d0ff0567c4d7cc61feeb5fc6a2e5d8cb669fb4c02686eb`
+
+The contract address is the full raw 32-byte Midnight `ContractAddress` returned by the wallet-approved deployment; it is intentionally recorded in full rather than abbreviated.
 
 ## Initial product idea
 
