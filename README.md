@@ -14,6 +14,19 @@ KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a vot
 
 The contract address is the full raw 32-byte Midnight `ContractAddress` returned by the wallet-approved deployment; it is intentionally recorded in full rather than abbreviated.
 
+## Screenshots of UI
+<img width="1600" height="800" alt="Screenshot 2026-07-27 231804" src="https://github.com/user-attachments/assets/c55b1366-f238-4104-8e71-6b8547e1407f" />
+<img width="1600" height="800" alt="Screenshot 2026-07-27 231739" src="https://github.com/user-attachments/assets/f9ff2961-a894-4e07-b94b-f3554071684a" />
+<img width="1600" height="800" alt="Screenshot 2026-07-27 231706" src="https://github.com/user-attachments/assets/735a6103-40a2-472d-b6e1-b7c759facc55" />
+<img width="1917" height="968" alt="Screenshot 2026-07-27 232017" src="https://github.com/user-attachments/assets/a4f946c8-b58a-457d-86fa-5ee23e66236c" />
+
+
+## Live Website Link
+https://kage-vote.vercel.app/
+## live demo video
+
+
+
 ## Initial product idea
 
 KageVote brings private voting to communities that need credible outcomes without turning participation into a public social graph. Members prove they satisfy an eligibility rule through a local witness, while their identity and ballot selection remain private. A proposal’s text, timing, proof-validity signals, and aggregate final tally remain public so the community can audit the decision without being able to reconstruct who voted for what.
