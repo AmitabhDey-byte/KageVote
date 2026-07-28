@@ -1,4 +1,4 @@
-# KageVote
+<img width="1916" height="867" alt="image" src="https://github.com/user-attachments/assets/a93a8448-3ab4-4f52-ade7-d714dfdae10f" /># KageVote
 
 [![KageVote CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
@@ -15,10 +15,20 @@ KageVote is an anime-noir, privacy-first voting dApp concept for Midnight: a vot
 The contract address is the full raw 32-byte Midnight `ContractAddress` returned by the wallet-approved deployment; it is intentionally recorded in full rather than abbreviated.
 
 ## Screenshots of UI
-<img width="1600" height="800" alt="Screenshot 2026-07-27 231804" src="https://github.com/user-attachments/assets/c55b1366-f238-4104-8e71-6b8547e1407f" />
-<img width="1600" height="800" alt="Screenshot 2026-07-27 231739" src="https://github.com/user-attachments/assets/f9ff2961-a894-4e07-b94b-f3554071684a" />
-<img width="1600" height="800" alt="Screenshot 2026-07-27 231706" src="https://github.com/user-attachments/assets/735a6103-40a2-472d-b6e1-b7c759facc55" />
-<img width="1917" height="968" alt="Screenshot 2026-07-27 232017" src="https://github.com/user-attachments/assets/a4f946c8-b58a-457d-86fa-5ee23e66236c" />
+<img width="1400" height="700" alt="Screenshot 2026-07-27 231804" src="https://github.com/user-attachments/assets/c55b1366-f238-4104-8e71-6b8547e1407f" />
+<img width="1400" height="700" alt="Screenshot 2026-07-27 231739" src="https://github.com/user-attachments/assets/f9ff2961-a894-4e07-b94b-f3554071684a" />
+<img width="1400" height="700" alt="Screenshot 2026-07-27 231706" src="https://github.com/user-attachments/assets/735a6103-40a2-472d-b6e1-b7c759facc55" />
+<img width="1400" height="700" alt="Screenshot 2026-07-27 232017" src="https://github.com/user-attachments/assets/a4f946c8-b58a-457d-86fa-5ee23e66236c" />
+## Test Passing Screenshot
+
+<img width="1400" height="800" alt="Screenshot 2026-07-28 171306" src="https://github.com/user-attachments/assets/3619a9cc-dab2-476b-95cd-68546748e0d6" />
+<img width="1400" height="300" alt="Screenshot 2026-07-28 171212" src="https://github.com/user-attachments/assets/e7ff037f-ba89-43fd-80b4-54db64f30544" />
+
+## Mobile Responsive UI
+
+<img width="360" height="800" alt="WhatsApp Image 2026-07-28 at 5 17 20 PM" src="https://github.com/user-attachments/assets/9c85f9c8-b082-42d4-a082-1ba6a2098df9" />
+<img width="360" height="800" alt="WhatsApp Image 2026-07-28 at 5 17 20 PM (2)" src="https://github.com/user-attachments/assets/263d3b5c-e3bd-46fb-8987-d8a65caf088a" />
+<img width="360" height="800" alt="WhatsApp Image 2026-07-28 at 5 17 20 PM (1)" src="https://github.com/user-attachments/assets/2b9c85a0-e44a-4770-80ca-d036b9a64f58" />
 
 
 ## Live Website Link
