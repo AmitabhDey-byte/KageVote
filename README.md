@@ -1,4 +1,4 @@
-<img width="1916" height="867" alt="image" src="https://github.com/user-attachments/assets/a93a8448-3ab4-4f52-ade7-d714dfdae10f" /># KageVote
+# KageVote
 
 [![KageVote CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
