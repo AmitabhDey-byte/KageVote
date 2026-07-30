@@ -35,7 +35,7 @@ The contract address is the full raw 32-byte Midnight `ContractAddress` returned
 https://kage-vote.vercel.app/
 ## live demo video
 
-
+https://drive.google.com/file/d/1o8zwExQ_Amuk35QvGjyYW4AFVWxwoa_7/view?usp=sharing
 
 ## Initial product idea
 
